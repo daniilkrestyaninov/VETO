@@ -64,6 +64,44 @@ class CurrentUser extends _$CurrentUser {
     state = const AsyncValue.data(null);
   }
 
+  // Вход через Email
+  Future<void> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final authRepo = ref.read(authRepositoryProvider);
+      return await authRepo.signInWithEmail(email: email, password: password);
+    });
+  }
+
+  // Регистрация через Email
+  Future<void> signUpWithEmail({
+    required String email,
+    required String password,
+    required String username,
+  }) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final authRepo = ref.read(authRepositoryProvider);
+      return await authRepo.signUpWithEmail(
+        email: email,
+        password: password,
+        username: username,
+      );
+    });
+  }
+
+  // Вход через Google
+  Future<void> signInWithGoogle() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final authRepo = ref.read(authRepositoryProvider);
+      return await authRepo.signInWithGoogle();
+    });
+  }
+
   // Обновить профиль
   Future<void> updateProfile({
     String? username,

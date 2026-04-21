@@ -66,5 +66,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Deep Link для OAuth callback -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>io.supabase.veto</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.supabase.veto</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

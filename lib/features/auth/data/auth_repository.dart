@@ -192,4 +192,82 @@ class AuthRepository {
       throw Exception('Ошибка обновления профиля: $e');
     }
   }
+
+  // OAuth: Вход через Google
+  Future<models.User> signInWithGoogle() async {
+    try {
+      print('DEBUG: Начинаем OAuth вход через Google');
+      print('DEBUG: Текущий статус авторизации: $isAuthenticated');
+
+      final response = await _supabase.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'io.supabase.veto://login-callback',
+      );
+
+      if (!response) {
+        throw Exception('Не удалось инициировать OAuth');
+      }
+
+      print('DEBUG: OAuth окно открыто, ждем авторизации...');
+
+      // Ждем авторизации до 60 секунд
+      for (int i = 0; i < 60; i++) {
+        await Future.delayed(const Duration(seconds: 1));
+        print('DEBUG: Попытка $i: isAuthenticated = $isAuthenticated');
+
+        if (isAuthenticated) {
+          print('DEBUG: ✅ Пользователь авторизован!');
+          print('DEBUG: User ID: ${currentUser?.id}');
+          print('DEBUG: User Email: ${currentUser?.email}');
+          break;
+        }
+      }
+
+      if (!isAuthenticated) {
+        print('DEBUG: ❌ Время ожидания OAuth истекло');
+        throw Exception(
+            'Время ожидания OAuth истекло. Проверьте настройки Deep Links в Supabase Dashboard.');
+      }
+
+      final userId = currentUser!.id;
+      final existingUser =
+          await _supabase.from('users').select().eq('id', userId).maybeSingle();
+
+      if (existingUser != null) {
+        print('DEBUG: Пользователь уже существует в базе');
+        return models.User.fromJson(existingUser);
+      }
+
+      print('DEBUG: Создаем нового пользователя из Google данных');
+      final username = currentUser!.email?.split('@').first ?? 'User';
+      final userData = {
+        'id': userId,
+        'username': username,
+        'avatar_url': currentUser!.userMetadata?['avatar_url'],
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      await _supabase.from('users').insert(userData);
+      return models.User.fromJson(userData);
+    } catch (e) {
+      print('DEBUG: ❌ Ошибка в signInWithGoogle: $e');
+      throw Exception('Ошибка входа через Google: $e');
+    }
+  }
+
+  // Упрощенные методы для совместимости с новым UI
+  Future<models.User> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    return await signIn(email: email, password: password);
+  }
+
+  Future<models.User> signUpWithEmail({
+    required String email,
+    required String password,
+    required String username,
+  }) async {
+    return await signUp(email: email, password: password, username: username);
+  }
 }

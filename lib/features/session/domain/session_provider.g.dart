@@ -174,6 +174,153 @@ class _SessionProviderElement
   String get sessionId => (origin as SessionProvider).sessionId;
 }
 
+String _$userVetoTokensHash() => r'634e601c7f07fa26af68cccac88619d48914f60b';
+
+/// See also [userVetoTokens].
+@ProviderFor(userVetoTokens)
+const userVetoTokensProvider = UserVetoTokensFamily();
+
+/// See also [userVetoTokens].
+class UserVetoTokensFamily extends Family<AsyncValue<int>> {
+  /// See also [userVetoTokens].
+  const UserVetoTokensFamily();
+
+  /// See also [userVetoTokens].
+  UserVetoTokensProvider call({
+    required String groupId,
+    required String userId,
+  }) {
+    return UserVetoTokensProvider(
+      groupId: groupId,
+      userId: userId,
+    );
+  }
+
+  @override
+  UserVetoTokensProvider getProviderOverride(
+    covariant UserVetoTokensProvider provider,
+  ) {
+    return call(
+      groupId: provider.groupId,
+      userId: provider.userId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'userVetoTokensProvider';
+}
+
+/// See also [userVetoTokens].
+class UserVetoTokensProvider extends AutoDisposeFutureProvider<int> {
+  /// See also [userVetoTokens].
+  UserVetoTokensProvider({
+    required String groupId,
+    required String userId,
+  }) : this._internal(
+          (ref) => userVetoTokens(
+            ref as UserVetoTokensRef,
+            groupId: groupId,
+            userId: userId,
+          ),
+          from: userVetoTokensProvider,
+          name: r'userVetoTokensProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$userVetoTokensHash,
+          dependencies: UserVetoTokensFamily._dependencies,
+          allTransitiveDependencies:
+              UserVetoTokensFamily._allTransitiveDependencies,
+          groupId: groupId,
+          userId: userId,
+        );
+
+  UserVetoTokensProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.groupId,
+    required this.userId,
+  }) : super.internal();
+
+  final String groupId;
+  final String userId;
+
+  @override
+  Override overrideWith(
+    FutureOr<int> Function(UserVetoTokensRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: UserVetoTokensProvider._internal(
+        (ref) => create(ref as UserVetoTokensRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        groupId: groupId,
+        userId: userId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<int> createElement() {
+    return _UserVetoTokensProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is UserVetoTokensProvider &&
+        other.groupId == groupId &&
+        other.userId == userId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, groupId.hashCode);
+    hash = _SystemHash.combine(hash, userId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin UserVetoTokensRef on AutoDisposeFutureProviderRef<int> {
+  /// The parameter `groupId` of this provider.
+  String get groupId;
+
+  /// The parameter `userId` of this provider.
+  String get userId;
+}
+
+class _UserVetoTokensProviderElement
+    extends AutoDisposeFutureProviderElement<int> with UserVetoTokensRef {
+  _UserVetoTokensProviderElement(super.provider);
+
+  @override
+  String get groupId => (origin as UserVetoTokensProvider).groupId;
+  @override
+  String get userId => (origin as UserVetoTokensProvider).userId;
+}
+
 String _$activeSessionHash() => r'f374dd9b19f30db3ce3e06e89ccf15ef0b06e9cb';
 
 abstract class _$ActiveSession
@@ -464,6 +611,151 @@ class _SessionOptionsProviderElement
 
   @override
   String get sessionId => (origin as SessionOptionsProvider).sessionId;
+}
+
+String _$vetoLogsHash() => r'90c2ade0c972b16c90de68048b5017dd08969126';
+
+abstract class _$VetoLogs
+    extends BuildlessAutoDisposeAsyncNotifier<List<VetoLog>> {
+  late final String sessionId;
+
+  FutureOr<List<VetoLog>> build(
+    String sessionId,
+  );
+}
+
+/// See also [VetoLogs].
+@ProviderFor(VetoLogs)
+const vetoLogsProvider = VetoLogsFamily();
+
+/// See also [VetoLogs].
+class VetoLogsFamily extends Family<AsyncValue<List<VetoLog>>> {
+  /// See also [VetoLogs].
+  const VetoLogsFamily();
+
+  /// See also [VetoLogs].
+  VetoLogsProvider call(
+    String sessionId,
+  ) {
+    return VetoLogsProvider(
+      sessionId,
+    );
+  }
+
+  @override
+  VetoLogsProvider getProviderOverride(
+    covariant VetoLogsProvider provider,
+  ) {
+    return call(
+      provider.sessionId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'vetoLogsProvider';
+}
+
+/// See also [VetoLogs].
+class VetoLogsProvider
+    extends AutoDisposeAsyncNotifierProviderImpl<VetoLogs, List<VetoLog>> {
+  /// See also [VetoLogs].
+  VetoLogsProvider(
+    String sessionId,
+  ) : this._internal(
+          () => VetoLogs()..sessionId = sessionId,
+          from: vetoLogsProvider,
+          name: r'vetoLogsProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$vetoLogsHash,
+          dependencies: VetoLogsFamily._dependencies,
+          allTransitiveDependencies: VetoLogsFamily._allTransitiveDependencies,
+          sessionId: sessionId,
+        );
+
+  VetoLogsProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.sessionId,
+  }) : super.internal();
+
+  final String sessionId;
+
+  @override
+  FutureOr<List<VetoLog>> runNotifierBuild(
+    covariant VetoLogs notifier,
+  ) {
+    return notifier.build(
+      sessionId,
+    );
+  }
+
+  @override
+  Override overrideWith(VetoLogs Function() create) {
+    return ProviderOverride(
+      origin: this,
+      override: VetoLogsProvider._internal(
+        () => create()..sessionId = sessionId,
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        sessionId: sessionId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeAsyncNotifierProviderElement<VetoLogs, List<VetoLog>>
+      createElement() {
+    return _VetoLogsProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is VetoLogsProvider && other.sessionId == sessionId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, sessionId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin VetoLogsRef on AutoDisposeAsyncNotifierProviderRef<List<VetoLog>> {
+  /// The parameter `sessionId` of this provider.
+  String get sessionId;
+}
+
+class _VetoLogsProviderElement
+    extends AutoDisposeAsyncNotifierProviderElement<VetoLogs, List<VetoLog>>
+    with VetoLogsRef {
+  _VetoLogsProviderElement(super.provider);
+
+  @override
+  String get sessionId => (origin as VetoLogsProvider).sessionId;
 }
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

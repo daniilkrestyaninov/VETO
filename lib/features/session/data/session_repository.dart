@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:veto_app/core/config/supabase_config.dart';
 import 'package:veto_app/shared/models/session.dart' as models;
 import 'package:veto_app/shared/models/option.dart';
+import 'package:veto_app/shared/models/veto_log.dart';
 
 class SessionRepository {
   final SupabaseClient _supabase = SupabaseConfig.client;
@@ -208,5 +209,128 @@ class SessionRepository {
   // Отписаться от канала
   Future<void> unsubscribe(RealtimeChannel channel) async {
     await _supabase.removeChannel(channel);
+  }
+
+  // Проверить количество токенов вето у пользователя
+  Future<int> getUserVetoTokens({
+    required String groupId,
+    required String userId,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('group_members')
+          .select('veto_tokens')
+          .eq('group_id', groupId)
+          .eq('user_id', userId)
+          .single();
+
+      return response['veto_tokens'] as int;
+    } catch (e) {
+      throw Exception('Ошибка получения токенов вето: $e');
+    }
+  }
+
+  // Использовать вето (транзакция)
+  Future<void> useVeto({
+    required String sessionId,
+    required String groupId,
+    required String userId,
+    String? reason,
+  }) async {
+    try {
+      print('DEBUG: Начинаем использование вето');
+      print('DEBUG: sessionId: $sessionId, groupId: $groupId, userId: $userId');
+
+      // 1. Проверяем количество токенов
+      final tokens = await getUserVetoTokens(groupId: groupId, userId: userId);
+      print('DEBUG: Текущее количество токенов: $tokens');
+
+      if (tokens <= 0) {
+        throw Exception('У вас нет токенов вето');
+      }
+
+      // 2. Получаем текущую сессию
+      final session = await getSession(sessionId);
+      print('DEBUG: Статус сессии: ${session.status}');
+
+      if (session.status != 'resolved') {
+        throw Exception('Вето можно использовать только на завершенную сессию');
+      }
+
+      // 3. Списываем токен
+      print('DEBUG: Списываем токен вето');
+      await _supabase
+          .from('group_members')
+          .update({'veto_tokens': tokens - 1})
+          .eq('group_id', groupId)
+          .eq('user_id', userId);
+
+      // 4. Записываем в лог вето
+      print('DEBUG: Записываем в лог вето');
+      final vetoLogData = {
+        'session_id': sessionId,
+        'user_id': userId,
+        'reason': reason,
+        'used_at': DateTime.now().toIso8601String(),
+      };
+
+      await _supabase.from('veto_logs').insert(vetoLogData);
+
+      // 5. Отменяем решение (меняем статус сессии обратно на waiting)
+      print('DEBUG: Отменяем решение');
+      await _supabase.from('sessions').update({
+        'status': 'waiting',
+        'final_decision_id': null,
+        'resolved_at': null,
+      }).eq('id', sessionId);
+
+      print('DEBUG: Вето успешно использовано');
+    } catch (e) {
+      print('DEBUG: Ошибка при использовании вето: $e');
+      throw Exception('Ошибка использования вето: $e');
+    }
+  }
+
+  // Получить историю вето для сессии
+  Future<List<VetoLog>> getVetoLogs(String sessionId) async {
+    try {
+      final response = await _supabase
+          .from('veto_logs')
+          .select()
+          .eq('session_id', sessionId)
+          .order('used_at', ascending: false);
+
+      return (response as List).map((item) => VetoLog.fromJson(item)).toList();
+    } catch (e) {
+      throw Exception('Ошибка получения истории вето: $e');
+    }
+  }
+
+  // Подписаться на изменения вето логов (Realtime)
+  RealtimeChannel subscribeToVetoLogs({
+    required String sessionId,
+    required Function(List<VetoLog>) onVetoLogsUpdate,
+  }) {
+    final channel = _supabase.channel('veto_logs:$sessionId');
+
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'veto_logs',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'session_id',
+            value: sessionId,
+          ),
+          callback: (payload) async {
+            // Перезагружаем все логи при любом изменении
+            final logs = await getVetoLogs(sessionId);
+            onVetoLogsUpdate(logs);
+          },
+        )
+        .subscribe();
+
+    return channel;
   }
 }

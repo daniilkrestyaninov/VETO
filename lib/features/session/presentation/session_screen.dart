@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:veto_app/features/auth/domain/auth_provider.dart';
 import 'package:veto_app/features/session/domain/session_provider.dart';
 import 'package:veto_app/core/theme/brutal_theme.dart';
 
@@ -27,6 +29,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   String? _finalDecision;
   bool _isSpinning = false;
   bool _showHammer = false;
+  bool _isUsingVeto = false;
 
   @override
   void initState() {
@@ -134,6 +137,82 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  Future<void> _handleVeto() async {
+    final user = ref.read(currentUserProvider).value;
+
+    if (user == null) {
+      _showError('ОШИБКА: ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН');
+      return;
+    }
+
+    // Получаем сессию
+    final session = await ref.read(sessionProvider(widget.sessionId).future);
+
+    // Показываем диалог подтверждения
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: BrutalTheme.darkGray,
+        title: Text(
+          'ИСПОЛЬЗОВАТЬ ВЕТО?',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        content: Text(
+          'Вы уверены, что хотите использовать токен вето?\nЭто отменит текущее решение и запустит новую рулетку.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'ОТМЕНА',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: BrutalTheme.accentRed,
+            ),
+            child: Text(
+              'ИСПОЛЬЗОВАТЬ ВЕТО',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: BrutalTheme.primaryWhite,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isUsingVeto = true);
+
+    try {
+      print('DEBUG: Используем вето для сессии: ${widget.sessionId}');
+      await ref.read(vetoLogsProvider(widget.sessionId).notifier).useVeto(
+            groupId: session.groupId,
+            userId: user.id,
+            reason: 'Не согласен с решением',
+          );
+
+      if (mounted) {
+        // Возвращаемся в лобби группы
+        context.go('/lobby/${session.groupId}');
+      }
+    } catch (e) {
+      print('DEBUG: Ошибка использования вето: $e');
+      if (mounted) {
+        _showError('ОШИБКА: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUsingVeto = false);
+      }
+    }
   }
 
   @override
@@ -262,6 +341,40 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                                       color: BrutalTheme.primaryBlack,
                                     ),
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Кнопка вето
+                          SizedBox(
+                            height: 60,
+                            width: 200,
+                            child: OutlinedButton(
+                              onPressed: _isUsingVeto ? null : _handleVeto,
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: BrutalTheme.accentRed,
+                                  width: 3,
+                                ),
+                              ),
+                              child: _isUsingVeto
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 3,
+                                        color: BrutalTheme.accentRed,
+                                      ),
+                                    )
+                                  : Text(
+                                      'ИСПОЛЬЗОВАТЬ ВЕТО',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color: BrutalTheme.accentRed,
+                                            fontSize: 14,
+                                          ),
+                                    ),
                             ),
                           ),
                         ],
