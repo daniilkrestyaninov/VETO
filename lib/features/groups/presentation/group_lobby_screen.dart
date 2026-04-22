@@ -357,6 +357,12 @@ class _GroupLobbyScreenState extends ConsumerState<GroupLobbyScreen> {
                             ),
                           ),
                           IconButton(
+                            icon: const Icon(Icons.qr_code, size: 20),
+                            onPressed: _showQrCode,
+                            color: BrutalTheme.warningYellow,
+                            tooltip: 'Показать QR',
+                          ),
+                          IconButton(
                             icon: const Icon(Icons.copy, size: 20),
                             onPressed: _copyGroupId,
                             color: BrutalTheme.warningYellow,
@@ -378,18 +384,12 @@ class _GroupLobbyScreenState extends ConsumerState<GroupLobbyScreen> {
                 ref.watch(groupMembersWithUsersProvider(widget.groupId)).when(
                       data: (members) {
                         if (members.isEmpty) {
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: BrutalTheme.mediumGray,
-                                width: 2,
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: CircularProgressIndicator(
+                                color: BrutalTheme.primaryWhite,
                               ),
-                            ),
-                            child: Text(
-                              'НЕТ УЧАСТНИКОВ',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                              textAlign: TextAlign.center,
                             ),
                           );
                         }
@@ -397,6 +397,27 @@ class _GroupLobbyScreenState extends ConsumerState<GroupLobbyScreen> {
                         return Column(
                           children: members.map((member) {
                             final memberUser = member['users'];
+                            
+                            // Если данные пользователя еще не загрузились (неполный список)
+                            if (memberUser == null) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: BrutalTheme.darkGray,
+                                  border: Border.all(
+                                    color: BrutalTheme.mediumGray,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: BrutalTheme.primaryWhite,
+                                  ),
+                                ),
+                              );
+                            }
+                            
                             final memberData = member;
                             final isOwner = memberData['role'] == 'owner';
                             final vetoTokens = memberData['veto_tokens'] as int;

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:veto_app/features/auth/presentation/auth_screen.dart';
 import 'package:veto_app/features/auth/presentation/login_screen.dart';
 import 'package:veto_app/features/auth/presentation/signup_screen.dart';
@@ -7,10 +9,57 @@ import 'package:veto_app/features/groups/presentation/group_select_screen.dart';
 import 'package:veto_app/features/groups/presentation/group_lobby_screen.dart';
 import 'package:veto_app/features/session/presentation/session_screen.dart';
 
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+          (dynamic _) => notifyListeners(),
+        );
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 class AppRouter {
   static final GoRouter router = GoRouter(
-    initialLocation: '/auth',
+    initialLocation: '/',
+    refreshListenable: GoRouterRefreshStream(Supabase.instance.client.auth.onAuthStateChange),
+    redirect: (context, state) {
+      final session = Supabase.instance.client.auth.currentSession;
+      final isAuth = session != null;
+      
+      final isGoingToAuth = state.matchedLocation == '/auth' || 
+                            state.matchedLocation == '/login' || 
+                            state.matchedLocation == '/signup';
+
+      if (state.matchedLocation == '/') {
+        return isAuth ? '/group-select' : '/auth';
+      }
+
+      if (!isAuth && !isGoingToAuth) {
+        return '/auth';
+      }
+      
+      if (isAuth && isGoingToAuth) {
+        return '/group-select';
+      }
+      
+      return null;
+    },
     routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const Scaffold(
+          backgroundColor: Colors.black,
+          body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        ),
+      ),
       GoRoute(
         path: '/auth',
         name: 'auth',

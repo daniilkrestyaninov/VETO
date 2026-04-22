@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,24 +35,24 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   void initState() {
     super.initState();
 
-    // Контроллер для вращения вариантов
+    // Контроллер для тряски/моргания при вращении
     _spinController = AnimationController(
       duration: const Duration(milliseconds: 100),
       vsync: this,
     );
 
-    _spinAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _spinController, curve: Curves.linear),
+    _spinAnimation = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(parent: _spinController, curve: Curves.easeOut),
     );
 
-    // Контроллер для удара молотка
+    // Контроллер для удара "Штампа"
     _hammerController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
 
-    _hammerAnimation = Tween<double>(begin: -200, end: 0).animate(
-      CurvedAnimation(parent: _hammerController, curve: Curves.easeInCubic),
+    _hammerAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _hammerController, curve: Curves.elasticOut),
     );
   }
 
@@ -70,54 +71,52 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     final sessionAsync = ref.read(sessionProvider(widget.sessionId));
     final session = sessionAsync.value;
 
-    print('DEBUG: Options count: ${options.length}');
-    print('DEBUG: Session status: ${session?.status}');
-    print('DEBUG: Selected option ID: ${session?.selectedOptionId}');
-
-    if (options.isEmpty || session == null) {
-      print('DEBUG: Cannot start animation - no options or session');
-      return;
-    }
-
-    if (_isAnimating) {
-      print('DEBUG: Animation already running, skipping');
-      return;
-    }
+    if (options.isEmpty || session == null) return;
+    if (_isAnimating) return;
 
     setState(() {
       _isAnimating = true;
       _showHammer = false;
     });
 
-    print('DEBUG: Starting spin animation');
+    final random = Random();
+    int lastIndex = _currentIndex;
+    
+    // Вращаем варианты около 3.5 секунд
+    const int totalSteps = 30;
 
-    // Вращаем варианты 3 секунды
-    const totalSpins = 30; // 30 итераций по 100мс = 3 секунды
-
-    for (int i = 0; i < totalSpins; i++) {
+    for (int i = 0; i < totalSteps; i++) {
       if (!mounted) return;
 
       setState(() {
-        _currentIndex = (i % options.length);
+        if (options.length > 1) {
+          int nextIndex;
+          do {
+            nextIndex = random.nextInt(options.length);
+          } while (nextIndex == lastIndex);
+          _currentIndex = nextIndex;
+          lastIndex = nextIndex;
+        } else {
+          _currentIndex = 0;
+        }
       });
 
-      await _spinController.forward();
-      await _spinController.reverse();
+      _spinController.forward(from: 0);
 
-      // Замедляем к концу
-      if (i > totalSpins - 10) {
-        await Future.delayed(Duration(milliseconds: i * 10));
-      }
+      // Замедление к концу
+      final progress = i / totalSteps;
+      final curve = Curves.easeInCubic.transform(progress);
+      final delayMs = 40 + (curve * 350).toInt();
+
+      await Future.delayed(Duration(milliseconds: delayMs));
     }
 
-    print('DEBUG: Spin animation completed, showing result');
+    if (!mounted) return;
 
-    // Показываем выбранный вариант из БД
+    // Показываем финальный
     if (session.selectedOptionId != null) {
       final selectedIndex =
           options.indexWhere((opt) => opt.id == session.selectedOptionId);
-
-      print('DEBUG: Selected index: $selectedIndex');
 
       if (selectedIndex != -1) {
         setState(() {
@@ -126,18 +125,9 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
           _showHammer = true;
         });
 
-        print('DEBUG: Showing hammer animation');
-
-        // Анимация удара молотка
-        await Future.delayed(const Duration(milliseconds: 300));
-        await _hammerController.forward();
-
-        print('DEBUG: Animation complete');
-      } else {
-        print('DEBUG: ERROR - Selected option not found in options list');
+        await Future.delayed(const Duration(milliseconds: 150));
+        await _hammerController.forward(from: 0);
       }
-    } else {
-      print('DEBUG: ERROR - No selected option ID in session');
     }
   }
 
@@ -262,26 +252,40 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     final sessionAsync = ref.watch(sessionProvider(widget.sessionId));
     final optionsAsync = ref.watch(sessionOptionsProvider(widget.sessionId));
 
-    // Слушаем изменения статуса сессии
-    ref.listen<AsyncValue<models.Session>>(
-      sessionProvider(widget.sessionId),
-      (previous, next) {
-        next.whenData((session) {
-          print('DEBUG: Session status changed to: ${session.status}');
+    final groupId = sessionAsync.valueOrNull?.groupId;
 
-          if (session.status == 'spinning' && !_isAnimating && !_showHammer) {
-            print('DEBUG: Starting animation for all clients');
-            // Запускаем анимацию на ВСЕХ устройствах
-            _startSpinningAnimation();
-          } else if (session.status == 'waiting') {
-            // Вернулись в лобби (после вето)
-            print('DEBUG: Returning to lobby after veto');
-            final groupId = session.groupId;
+    if (groupId != null) {
+      // Слушаем изменения активной сессии группы
+      ref.listen<AsyncValue<models.Session?>>(
+        activeSessionProvider(groupId),
+        (previous, next) {
+          final activeSession = next.value;
+          if (activeSession != null) {
+            if (activeSession.status == 'spinning' && !_isAnimating && !_showHammer) {
+              _startSpinningAnimation();
+            } else if (activeSession.status == 'waiting' || activeSession.status == 'idle') {
+              context.go('/lobby/$groupId');
+            }
+          } else {
             context.go('/lobby/$groupId');
           }
-        });
-      },
-    );
+        },
+      );
+
+      // Проверяем текущее состояние для первоначального запуска анимации
+      final activeSession = ref.watch(activeSessionProvider(groupId)).value;
+      final options = optionsAsync.value;
+      
+      if (activeSession != null && activeSession.status == 'spinning') {
+        if (options != null && options.isNotEmpty && !_isAnimating && !_showHammer) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_isAnimating && !_showHammer) {
+              _startSpinningAnimation();
+            }
+          });
+        }
+      }
+    }
 
     return Scaffold(
       backgroundColor: BrutalTheme.primaryBlack,
@@ -315,61 +319,103 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
 
                           // Заголовок
                           if (_isAnimating)
-                            Text(
-                              'ВЫБИРАЮ...',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineLarge
-                                  ?.copyWith(
-                                    color: BrutalTheme.accentRed,
+                            AnimatedBuilder(
+                              animation: _spinAnimation,
+                              builder: (context, child) {
+                                final random = Random();
+                                return Transform.translate(
+                                  offset: Offset((random.nextDouble() - 0.5) * 8, 0),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    color: BrutalTheme.warningYellow,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        'КРУТИМ...',
+                                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                          color: BrutalTheme.primaryBlack,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
                                   ),
+                                );
+                              }
                             )
                           else if (_showHammer)
-                            Text(
-                              'РЕШЕНО!',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displayMedium
-                                  ?.copyWith(
-                                    color: BrutalTheme.warningYellow,
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              color: BrutalTheme.accentRed,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'СУДЬБА РЕШЕНА',
+                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                    color: BrutalTheme.primaryWhite,
+                                    fontWeight: FontWeight.w900,
                                   ),
+                                ),
+                              ),
                             ),
 
                           // Гибкое пространство
                           const Spacer(flex: 1),
 
                           // Текущий вариант (в центре)
-                          AnimatedBuilder(
-                            animation: _spinAnimation,
-                            builder: (context, child) {
-                              return Transform.scale(
-                                scale: 1.0 + (_spinAnimation.value * 0.1),
-                                child: Container(
-                                  padding: const EdgeInsets.all(32),
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 24),
-                                  decoration: BoxDecoration(
-                                    color: _showHammer
-                                        ? BrutalTheme.accentRed
-                                        : BrutalTheme.darkGray,
-                                    border: Border.all(
-                                      color: BrutalTheme.primaryWhite,
-                                      width: 4,
+                          Flexible(
+                            flex: 3,
+                            child: AnimatedBuilder(
+                              animation: _spinAnimation,
+                              builder: (context, child) {
+                                final random = Random();
+                                final isSpinning = _isAnimating;
+                                final offset = isSpinning 
+                                    ? Offset((random.nextDouble() - 0.5) * 15 * _spinAnimation.value, 
+                                             (random.nextDouble() - 0.5) * 15 * _spinAnimation.value)
+                                    : Offset.zero;
+                                    
+                                return Transform.translate(
+                                  offset: offset,
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(32),
+                                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                                    decoration: BoxDecoration(
+                                      color: _showHammer
+                                          ? BrutalTheme.primaryWhite
+                                          : (isSpinning && _spinAnimation.value > 0.5 ? BrutalTheme.primaryWhite : BrutalTheme.primaryBlack),
+                                      border: Border.all(
+                                        color: _showHammer ? BrutalTheme.primaryBlack : BrutalTheme.primaryWhite,
+                                        width: 6,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: _showHammer ? BrutalTheme.accentRed : BrutalTheme.warningYellow,
+                                          offset: const Offset(12, 12),
+                                        ),
+                                      ],
+                                    ),
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        options[_currentIndex].title.toUpperCase(),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .displayMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w900,
+                                              color: (_showHammer || (isSpinning && _spinAnimation.value > 0.5)) 
+                                                  ? BrutalTheme.primaryBlack 
+                                                  : BrutalTheme.primaryWhite,
+                                              height: 1.1,
+                                            ),
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ),
-                                  child: Text(
-                                    options[_currentIndex].title.toUpperCase(),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .displaySmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
 
                           const Spacer(flex: 1),
@@ -456,20 +502,46 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                     ),
                   ),
 
-                  // Анимация молотка
+                  // Анимация штампа "ВЫБРАНО"
                   if (_showHammer)
                     AnimatedBuilder(
                       animation: _hammerAnimation,
                       builder: (context, child) {
-                        return Positioned(
-                          top: _hammerAnimation.value,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: Icon(
-                              Icons.gavel,
-                              size: 150,
-                              color: BrutalTheme.primaryWhite.withOpacity(0.9),
+                        final scale = 5.0 - (_hammerAnimation.value * 4.0); // от 5 до 1
+                        final opacity = (_hammerAnimation.value * 1.5).clamp(0.0, 1.0);
+                        
+                        return Positioned.fill(
+                          child: IgnorePointer(
+                            child: Center(
+                              child: Transform.scale(
+                                scale: scale,
+                                child: Transform.rotate(
+                                  angle: -0.15,
+                                  child: Opacity(
+                                    opacity: opacity,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: BrutalTheme.accentRed, width: 8),
+                                        color: BrutalTheme.primaryBlack.withOpacity(0.9),
+                                      ),
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            'ВЫБРАНО',
+                                            style: TextStyle(
+                                              fontFamily: 'SpaceMono',
+                                              fontSize: 56,
+                                              fontWeight: FontWeight.w900,
+                                              color: BrutalTheme.accentRed,
+                                              letterSpacing: 8,
+                                            ),
+                                          ),
+                                        ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         );

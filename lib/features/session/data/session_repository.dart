@@ -215,8 +215,10 @@ class SessionRepository {
           callback: (payload) {
             if (payload.newRecord != null && payload.newRecord.isNotEmpty) {
               final session = models.Session.fromJson(payload.newRecord);
-              // Если сессия активна (ожидает или крутится), обновляем
-              if (session.status == 'waiting' || session.status == 'spinning') {
+              // Если сессия активна (ожидает, крутится или сброшена в idle), обновляем
+              if (session.status == 'waiting' ||
+                  session.status == 'spinning' ||
+                  session.status == 'idle') {
                 onSessionUpdate(session);
               } else {
                 // Если сессия завершена (resolved) или отменена, обнуляем активную сессию
@@ -396,10 +398,10 @@ class SessionRepository {
       print('DEBUG: Удаляем вариант $selectedOptionId');
       await _supabase.from('options').delete().eq('id', selectedOptionId);
 
-      // 7. Сбрасываем сессию в waiting
-      print('DEBUG: Сбрасываем сессию в waiting');
+      // 7. Сбрасываем сессию в idle
+      print('DEBUG: Сбрасываем сессию в idle');
       await _supabase.from('sessions').update({
-        'status': 'waiting',
+        'status': 'idle',
         'selected_option_id': null,
         'final_decision_id': null,
         'resolved_at': null,
