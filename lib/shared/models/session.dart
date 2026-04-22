@@ -3,6 +3,8 @@ class Session {
   final String groupId;
   final String status;
   final String? finalDecisionId;
+  final String?
+      selectedOptionId; // Выбранный вариант (устанавливается при spinning)
   final DateTime createdAt;
   final DateTime? resolvedAt;
 
@@ -11,6 +13,7 @@ class Session {
     required this.groupId,
     required this.status,
     this.finalDecisionId,
+    this.selectedOptionId,
     required this.createdAt,
     this.resolvedAt,
   });
@@ -21,6 +24,7 @@ class Session {
       groupId: json['group_id'] as String,
       status: json['status'] as String,
       finalDecisionId: json['final_decision_id'] as String?,
+      selectedOptionId: json['selected_option_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       resolvedAt: json['resolved_at'] != null
           ? DateTime.parse(json['resolved_at'] as String)
@@ -34,6 +38,7 @@ class Session {
       'group_id': groupId,
       'status': status,
       'final_decision_id': finalDecisionId,
+      'selected_option_id': selectedOptionId,
       'created_at': createdAt.toIso8601String(),
       'resolved_at': resolvedAt?.toIso8601String(),
     };

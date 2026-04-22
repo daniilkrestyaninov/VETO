@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:veto_app/core/config/supabase_config.dart';
 import 'package:veto_app/shared/models/session.dart' as models;
@@ -112,12 +113,27 @@ class SessionRepository {
     }
   }
 
-  // Запустить рулетку (изменить статус на spinning)
+  // Запустить рулетку (изменить статус на spinning и выбрать случайный вариант)
   Future<models.Session> startSpinning(String sessionId) async {
     try {
+      // 1. Получаем все варианты сессии
+      final options = await getSessionOptions(sessionId);
+
+      if (options.isEmpty) {
+        throw Exception('Нет вариантов для выбора');
+      }
+
+      // 2. Выбираем случайный вариант НА СЕРВЕРЕ
+      final random =
+          options[DateTime.now().millisecondsSinceEpoch % options.length];
+
+      // 3. Обновляем сессию: статус = spinning, selected_option_id = выбранный вариант
       final response = await _supabase
           .from('sessions')
-          .update({'status': 'spinning'})
+          .update({
+            'status': 'spinning',
+            'selected_option_id': random.id,
+          })
           .eq('id', sessionId)
           .select()
           .single();
@@ -128,17 +144,24 @@ class SessionRepository {
     }
   }
 
-  // Завершить сессию с выбранным вариантом
-  Future<models.Session> resolveSession({
+  // Завершить сессию с выбранным вариантом (принять результат)
+  Future<models.Session> acceptResult({
     required String sessionId,
-    required String finalDecisionId,
   }) async {
     try {
+      // Получаем текущую сессию
+      final session = await getSession(sessionId);
+
+      if (session.selectedOptionId == null) {
+        throw Exception('Не выбран вариант');
+      }
+
+      // Меняем статус на resolved и копируем selected_option_id в final_decision_id
       final response = await _supabase
           .from('sessions')
           .update({
             'status': 'resolved',
-            'final_decision_id': finalDecisionId,
+            'final_decision_id': session.selectedOptionId,
             'resolved_at': DateTime.now().toIso8601String(),
           })
           .eq('id', sessionId)
@@ -147,63 +170,140 @@ class SessionRepository {
 
       return models.Session.fromJson(response);
     } catch (e) {
-      throw Exception('Ошибка завершения сессии: $e');
+      throw Exception('Ошибка принятия результата: $e');
     }
   }
 
-  // Подписаться на изменения сессии (Realtime)
-  RealtimeChannel subscribeToSession({
-    required String sessionId,
-    required Function(models.Session) onSessionUpdate,
-  }) {
-    final channel = _supabase.channel('session:$sessionId');
+  // Сбросить сессию в waiting (для владельца после принятия)
+  Future<models.Session> resetSession(String sessionId) async {
+    try {
+      final response = await _supabase
+          .from('sessions')
+          .update({
+            'status': 'waiting',
+            'selected_option_id': null,
+            'final_decision_id': null,
+            'resolved_at': null,
+          })
+          .eq('id', sessionId)
+          .select()
+          .single();
 
-    channel
-        .onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: 'sessions',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'id',
-            value: sessionId,
-          ),
-          callback: (payload) {
-            final session = models.Session.fromJson(payload.newRecord);
-            onSessionUpdate(session);
-          },
-        )
-        .subscribe();
-
-    return channel;
+      return models.Session.fromJson(response);
+    } catch (e) {
+      throw Exception('Ошибка сброса сессии: $e');
+    }
   }
 
-  // Подписаться на изменения вариантов (Realtime)
-  RealtimeChannel subscribeToOptions({
-    required String sessionId,
-    required Function(List<Option>) onOptionsUpdate,
+  // Подписаться на изменения всех сессий группы (Realtime)
+  RealtimeChannel subscribeToGroupSessions({
+    required String groupId,
+    required Function(models.Session?) onSessionUpdate,
   }) {
-    final channel = _supabase.channel('options:$sessionId');
+    final channel = _supabase.channel('group_sessions:$groupId');
 
     channel
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
-          table: 'options',
+          table: 'sessions',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'session_id',
-            value: sessionId,
+            column: 'group_id',
+            value: groupId,
           ),
-          callback: (payload) async {
-            // Перезагружаем все варианты при любом изменении
-            final options = await getSessionOptions(sessionId);
-            onOptionsUpdate(options);
+          callback: (payload) {
+            if (payload.newRecord != null && payload.newRecord.isNotEmpty) {
+              final session = models.Session.fromJson(payload.newRecord);
+              // Если сессия активна (ожидает или крутится), обновляем
+              if (session.status == 'waiting' || session.status == 'spinning') {
+                onSessionUpdate(session);
+              } else {
+                // Если сессия завершена (resolved) или отменена, обнуляем активную сессию
+                onSessionUpdate(null);
+              }
+            }
           },
         )
         .subscribe();
 
     return channel;
+  }
+
+  // Stream вариантов сессии (Realtime)
+  Stream<List<Option>> streamSessionOptions(String sessionId) {
+    late final StreamController<List<Option>> controller;
+    RealtimeChannel? channel;
+    List<Option> currentOptions = [];
+
+    controller = StreamController<List<Option>>.broadcast(
+      onListen: () async {
+        // Начальная загрузка
+        try {
+          currentOptions = await getSessionOptions(sessionId);
+          if (!controller.isClosed) controller.add(List.from(currentOptions));
+        } catch (e) {
+          if (!controller.isClosed) controller.addError(e);
+        }
+        
+        channel = _supabase.channel('options_channel:$sessionId');
+        channel!
+            .onPostgresChanges(
+              event: PostgresChangeEvent.all,
+              schema: 'public',
+              table: 'options',
+              // Не фильтруем по session_id, чтобы ловить удаление (где payload может не содержать session_id)
+              callback: (payload) {
+                bool changed = false;
+                
+                if (payload.eventType == PostgresChangeEvent.insert) {
+                  final newRecord = payload.newRecord;
+                  if (newRecord['session_id'] == sessionId) {
+                    final option = Option.fromJson(newRecord);
+                    if (!currentOptions.any((o) => o.id == option.id)) {
+                      currentOptions.add(option);
+                      changed = true;
+                    }
+                  }
+                } else if (payload.eventType == PostgresChangeEvent.delete) {
+                  final oldRecord = payload.oldRecord;
+                  final deletedId = oldRecord['id'];
+                  final index = currentOptions.indexWhere((o) => o.id == deletedId);
+                  if (index != -1) {
+                    currentOptions.removeAt(index);
+                    changed = true;
+                  }
+                } else if (payload.eventType == PostgresChangeEvent.update) {
+                  final newRecord = payload.newRecord;
+                  if (newRecord['session_id'] == sessionId) {
+                    final option = Option.fromJson(newRecord);
+                    final index = currentOptions.indexWhere((o) => o.id == option.id);
+                    if (index != -1) {
+                      currentOptions[index] = option;
+                    } else {
+                      currentOptions.add(option);
+                    }
+                    changed = true;
+                  }
+                }
+                
+                if (changed && !controller.isClosed) {
+                  // Сортируем по времени добавления
+                  currentOptions.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+                  controller.add(List.from(currentOptions));
+                }
+              },
+            )
+            .subscribe();
+      },
+      onCancel: () {
+        if (channel != null) {
+          _supabase.removeChannel(channel!);
+        }
+      },
+    );
+
+    return controller.stream;
   }
 
   // Отписаться от канала
@@ -234,12 +334,19 @@ class SessionRepository {
   Future<void> useVeto({
     required String sessionId,
     required String groupId,
-    required String userId,
     String? reason,
   }) async {
     try {
       print('DEBUG: Начинаем использование вето');
-      print('DEBUG: sessionId: $sessionId, groupId: $groupId, userId: $userId');
+      print('DEBUG: sessionId: $sessionId, groupId: $groupId');
+
+      // Получаем текущего пользователя
+      final currentUser = _supabase.auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('Пользователь не авторизован');
+      }
+      final userId = currentUser.id;
+      print('DEBUG: userId: $userId');
 
       // 1. Проверяем количество токенов
       final tokens = await getUserVetoTokens(groupId: groupId, userId: userId);
@@ -253,11 +360,19 @@ class SessionRepository {
       final session = await getSession(sessionId);
       print('DEBUG: Статус сессии: ${session.status}');
 
-      if (session.status != 'resolved') {
-        throw Exception('Вето можно использовать только на завершенную сессию');
+      if (session.status != 'spinning' && session.status != 'resolved') {
+        throw Exception(
+            'Вето можно использовать только на активную или завершенную сессию');
       }
 
-      // 3. Списываем токен
+      // 3. Получаем выбранный вариант
+      final selectedOptionId =
+          session.selectedOptionId ?? session.finalDecisionId;
+      if (selectedOptionId == null) {
+        throw Exception('Нет выбранного варианта для вето');
+      }
+
+      // 4. Списываем токен
       print('DEBUG: Списываем токен вето');
       await _supabase
           .from('group_members')
@@ -265,21 +380,27 @@ class SessionRepository {
           .eq('group_id', groupId)
           .eq('user_id', userId);
 
-      // 4. Записываем в лог вето
+      // 5. Записываем в лог вето
       print('DEBUG: Записываем в лог вето');
       final vetoLogData = {
         'session_id': sessionId,
         'user_id': userId,
+        'vetoed_option_id': selectedOptionId,
         'reason': reason,
         'used_at': DateTime.now().toIso8601String(),
       };
 
       await _supabase.from('veto_logs').insert(vetoLogData);
 
-      // 5. Отменяем решение (меняем статус сессии обратно на waiting)
-      print('DEBUG: Отменяем решение');
+      // 6. Удаляем вариант из options
+      print('DEBUG: Удаляем вариант $selectedOptionId');
+      await _supabase.from('options').delete().eq('id', selectedOptionId);
+
+      // 7. Сбрасываем сессию в waiting
+      print('DEBUG: Сбрасываем сессию в waiting');
       await _supabase.from('sessions').update({
         'status': 'waiting',
+        'selected_option_id': null,
         'final_decision_id': null,
         'resolved_at': null,
       }).eq('id', sessionId);

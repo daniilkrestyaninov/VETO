@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:veto_app/features/groups/data/group_repository.dart';
 import 'package:veto_app/shared/models/group.dart';
 import 'package:veto_app/shared/models/group_member.dart';
@@ -66,14 +67,14 @@ Future<List<GroupMember>> groupMembers(
   return await repo.getGroupMembers(groupId);
 }
 
-// Провайдер участников с данными пользователей
+// Провайдер участников с данными пользователей с Stream
 @riverpod
-Future<List<Map<String, dynamic>>> groupMembersWithUsers(
+Stream<List<Map<String, dynamic>>> groupMembersWithUsers(
   GroupMembersWithUsersRef ref,
   String groupId,
-) async {
+) {
   final repo = ref.watch(groupRepositoryProvider);
-  return await repo.getGroupMembersWithUsers(groupId);
+  return repo.streamGroupMembersWithUsers(groupId);
 }
 
 // Провайдер информации об участнике

@@ -24,7 +24,7 @@ final sessionRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SessionRepositoryRef = AutoDisposeProviderRef<SessionRepository>;
-String _$sessionHash() => r'b663c2413bc7207c6a29b5ce6d77d4d32d0940d1';
+String _$sessionOptionsHash() => r'bd87c432e22c7124aa67cd028db363b00598c7c2';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -46,6 +46,137 @@ class _SystemHash {
     return 0x1fffffff & (hash + ((0x00003fff & hash) << 15));
   }
 }
+
+/// See also [sessionOptions].
+@ProviderFor(sessionOptions)
+const sessionOptionsProvider = SessionOptionsFamily();
+
+/// See also [sessionOptions].
+class SessionOptionsFamily extends Family<AsyncValue<List<Option>>> {
+  /// See also [sessionOptions].
+  const SessionOptionsFamily();
+
+  /// See also [sessionOptions].
+  SessionOptionsProvider call(
+    String sessionId,
+  ) {
+    return SessionOptionsProvider(
+      sessionId,
+    );
+  }
+
+  @override
+  SessionOptionsProvider getProviderOverride(
+    covariant SessionOptionsProvider provider,
+  ) {
+    return call(
+      provider.sessionId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'sessionOptionsProvider';
+}
+
+/// See also [sessionOptions].
+class SessionOptionsProvider extends AutoDisposeStreamProvider<List<Option>> {
+  /// See also [sessionOptions].
+  SessionOptionsProvider(
+    String sessionId,
+  ) : this._internal(
+          (ref) => sessionOptions(
+            ref as SessionOptionsRef,
+            sessionId,
+          ),
+          from: sessionOptionsProvider,
+          name: r'sessionOptionsProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$sessionOptionsHash,
+          dependencies: SessionOptionsFamily._dependencies,
+          allTransitiveDependencies:
+              SessionOptionsFamily._allTransitiveDependencies,
+          sessionId: sessionId,
+        );
+
+  SessionOptionsProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.sessionId,
+  }) : super.internal();
+
+  final String sessionId;
+
+  @override
+  Override overrideWith(
+    Stream<List<Option>> Function(SessionOptionsRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: SessionOptionsProvider._internal(
+        (ref) => create(ref as SessionOptionsRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        sessionId: sessionId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeStreamProviderElement<List<Option>> createElement() {
+    return _SessionOptionsProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SessionOptionsProvider && other.sessionId == sessionId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, sessionId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin SessionOptionsRef on AutoDisposeStreamProviderRef<List<Option>> {
+  /// The parameter `sessionId` of this provider.
+  String get sessionId;
+}
+
+class _SessionOptionsProviderElement
+    extends AutoDisposeStreamProviderElement<List<Option>>
+    with SessionOptionsRef {
+  _SessionOptionsProviderElement(super.provider);
+
+  @override
+  String get sessionId => (origin as SessionOptionsProvider).sessionId;
+}
+
+String _$sessionHash() => r'b663c2413bc7207c6a29b5ce6d77d4d32d0940d1';
 
 /// See also [session].
 @ProviderFor(session)
@@ -321,7 +452,7 @@ class _UserVetoTokensProviderElement
   String get userId => (origin as UserVetoTokensProvider).userId;
 }
 
-String _$activeSessionHash() => r'f374dd9b19f30db3ce3e06e89ccf15ef0b06e9cb';
+String _$activeSessionHash() => r'48376abf16fee0834252df728b9bbb92169f5ef8';
 
 abstract class _$ActiveSession
     extends BuildlessAutoDisposeAsyncNotifier<models.Session?> {
@@ -467,153 +598,7 @@ class _ActiveSessionProviderElement
   String get groupId => (origin as ActiveSessionProvider).groupId;
 }
 
-String _$sessionOptionsHash() => r'9dd8ba2e2f2edfc9b1dbe1efd78fc0dac0b2c3a1';
-
-abstract class _$SessionOptions
-    extends BuildlessAutoDisposeAsyncNotifier<List<Option>> {
-  late final String sessionId;
-
-  FutureOr<List<Option>> build(
-    String sessionId,
-  );
-}
-
-/// See also [SessionOptions].
-@ProviderFor(SessionOptions)
-const sessionOptionsProvider = SessionOptionsFamily();
-
-/// See also [SessionOptions].
-class SessionOptionsFamily extends Family<AsyncValue<List<Option>>> {
-  /// See also [SessionOptions].
-  const SessionOptionsFamily();
-
-  /// See also [SessionOptions].
-  SessionOptionsProvider call(
-    String sessionId,
-  ) {
-    return SessionOptionsProvider(
-      sessionId,
-    );
-  }
-
-  @override
-  SessionOptionsProvider getProviderOverride(
-    covariant SessionOptionsProvider provider,
-  ) {
-    return call(
-      provider.sessionId,
-    );
-  }
-
-  static const Iterable<ProviderOrFamily>? _dependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
-
-  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
-
-  @override
-  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
-      _allTransitiveDependencies;
-
-  @override
-  String? get name => r'sessionOptionsProvider';
-}
-
-/// See also [SessionOptions].
-class SessionOptionsProvider
-    extends AutoDisposeAsyncNotifierProviderImpl<SessionOptions, List<Option>> {
-  /// See also [SessionOptions].
-  SessionOptionsProvider(
-    String sessionId,
-  ) : this._internal(
-          () => SessionOptions()..sessionId = sessionId,
-          from: sessionOptionsProvider,
-          name: r'sessionOptionsProvider',
-          debugGetCreateSourceHash:
-              const bool.fromEnvironment('dart.vm.product')
-                  ? null
-                  : _$sessionOptionsHash,
-          dependencies: SessionOptionsFamily._dependencies,
-          allTransitiveDependencies:
-              SessionOptionsFamily._allTransitiveDependencies,
-          sessionId: sessionId,
-        );
-
-  SessionOptionsProvider._internal(
-    super._createNotifier, {
-    required super.name,
-    required super.dependencies,
-    required super.allTransitiveDependencies,
-    required super.debugGetCreateSourceHash,
-    required super.from,
-    required this.sessionId,
-  }) : super.internal();
-
-  final String sessionId;
-
-  @override
-  FutureOr<List<Option>> runNotifierBuild(
-    covariant SessionOptions notifier,
-  ) {
-    return notifier.build(
-      sessionId,
-    );
-  }
-
-  @override
-  Override overrideWith(SessionOptions Function() create) {
-    return ProviderOverride(
-      origin: this,
-      override: SessionOptionsProvider._internal(
-        () => create()..sessionId = sessionId,
-        from: from,
-        name: null,
-        dependencies: null,
-        allTransitiveDependencies: null,
-        debugGetCreateSourceHash: null,
-        sessionId: sessionId,
-      ),
-    );
-  }
-
-  @override
-  AutoDisposeAsyncNotifierProviderElement<SessionOptions, List<Option>>
-      createElement() {
-    return _SessionOptionsProviderElement(this);
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is SessionOptionsProvider && other.sessionId == sessionId;
-  }
-
-  @override
-  int get hashCode {
-    var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, sessionId.hashCode);
-
-    return _SystemHash.finish(hash);
-  }
-}
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-mixin SessionOptionsRef on AutoDisposeAsyncNotifierProviderRef<List<Option>> {
-  /// The parameter `sessionId` of this provider.
-  String get sessionId;
-}
-
-class _SessionOptionsProviderElement
-    extends AutoDisposeAsyncNotifierProviderElement<SessionOptions,
-        List<Option>> with SessionOptionsRef {
-  _SessionOptionsProviderElement(super.provider);
-
-  @override
-  String get sessionId => (origin as SessionOptionsProvider).sessionId;
-}
-
-String _$vetoLogsHash() => r'90c2ade0c972b16c90de68048b5017dd08969126';
+String _$vetoLogsHash() => r'8541c88ccb02d2aeb2542a07316d9f7fcbef4229';
 
 abstract class _$VetoLogs
     extends BuildlessAutoDisposeAsyncNotifier<List<VetoLog>> {

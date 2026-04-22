@@ -19,11 +19,8 @@ class GroupRepository {
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      final groupResponse = await _supabase
-          .from('groups')
-          .insert(groupData)
-          .select()
-          .single();
+      final groupResponse =
+          await _supabase.from('groups').insert(groupData).select().single();
 
       final group = Group.fromJson(groupResponse);
 
@@ -85,11 +82,8 @@ class GroupRepository {
   // Получить группу по ID
   Future<Group> getGroup(String groupId) async {
     try {
-      final response = await _supabase
-          .from('groups')
-          .select()
-          .eq('id', groupId)
-          .single();
+      final response =
+          await _supabase.from('groups').select().eq('id', groupId).single();
 
       return Group.fromJson(response);
     } catch (e) {
@@ -144,6 +138,18 @@ class GroupRepository {
     } catch (e) {
       throw Exception('Ошибка получения участников: $e');
     }
+  }
+
+  // Stream участников группы с данными пользователей (Realtime)
+  Stream<List<Map<String, dynamic>>> streamGroupMembersWithUsers(
+      String groupId) async* {
+    // Выполняем первый запрос сразу
+    yield await getGroupMembersWithUsers(groupId);
+    
+    // Затем используем обычный метод с периодическим обновлением
+    // т.к. stream() не поддерживает join с users
+    yield* Stream.periodic(const Duration(seconds: 2), (_) => groupId)
+        .asyncMap((_) => getGroupMembersWithUsers(groupId));
   }
 
   // Покинуть группу

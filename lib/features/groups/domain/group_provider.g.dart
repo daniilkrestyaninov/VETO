@@ -599,7 +599,7 @@ class _GroupMembersProviderElement
 }
 
 String _$groupMembersWithUsersHash() =>
-    r'0bc359ef073f33b6e0d6486f9bee21691098d8b5';
+    r'f3a252c24efd3a60d5e660fa379a4b85742055bc';
 
 /// See also [groupMembersWithUsers].
 @ProviderFor(groupMembersWithUsers)
@@ -646,7 +646,7 @@ class GroupMembersWithUsersFamily
 
 /// See also [groupMembersWithUsers].
 class GroupMembersWithUsersProvider
-    extends AutoDisposeFutureProvider<List<Map<String, dynamic>>> {
+    extends AutoDisposeStreamProvider<List<Map<String, dynamic>>> {
   /// See also [groupMembersWithUsers].
   GroupMembersWithUsersProvider(
     String groupId,
@@ -681,7 +681,7 @@ class GroupMembersWithUsersProvider
 
   @override
   Override overrideWith(
-    FutureOr<List<Map<String, dynamic>>> Function(
+    Stream<List<Map<String, dynamic>>> Function(
             GroupMembersWithUsersRef provider)
         create,
   ) {
@@ -700,7 +700,7 @@ class GroupMembersWithUsersProvider
   }
 
   @override
-  AutoDisposeFutureProviderElement<List<Map<String, dynamic>>> createElement() {
+  AutoDisposeStreamProviderElement<List<Map<String, dynamic>>> createElement() {
     return _GroupMembersWithUsersProviderElement(this);
   }
 
@@ -721,13 +721,13 @@ class GroupMembersWithUsersProvider
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 mixin GroupMembersWithUsersRef
-    on AutoDisposeFutureProviderRef<List<Map<String, dynamic>>> {
+    on AutoDisposeStreamProviderRef<List<Map<String, dynamic>>> {
   /// The parameter `groupId` of this provider.
   String get groupId;
 }
 
 class _GroupMembersWithUsersProviderElement
-    extends AutoDisposeFutureProviderElement<List<Map<String, dynamic>>>
+    extends AutoDisposeStreamProviderElement<List<Map<String, dynamic>>>
     with GroupMembersWithUsersRef {
   _GroupMembersWithUsersProviderElement(super.provider);
 

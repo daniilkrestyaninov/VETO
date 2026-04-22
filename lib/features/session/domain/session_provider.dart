@@ -23,10 +23,8 @@ class ActiveSession extends _$ActiveSession {
     final repo = ref.watch(sessionRepositoryProvider);
     final session = await repo.getActiveSession(groupId);
 
-    // Подписываемся на изменения, если сессия существует
-    if (session != null) {
-      _subscribeToSession(session.id);
-    }
+    // Подписываемся на изменения ВСЕХ сессий группы (Realtime)
+    _subscribeToGroupSessions(groupId);
 
     // Отписываемся при dispose
     ref.onDispose(() {
@@ -36,14 +34,24 @@ class ActiveSession extends _$ActiveSession {
     return session;
   }
 
-  void _subscribeToSession(String sessionId) {
+  void _subscribeToGroupSessions(String groupId) {
     final repo = ref.read(sessionRepositoryProvider);
-    _sessionChannel = repo.subscribeToSession(
-      sessionId: sessionId,
-      onSessionUpdate: (session) {
+    _sessionChannel = repo.subscribeToGroupSessions(
+      groupId: groupId,
+      onSessionUpdate: (models.Session? session) {
         state = AsyncValue.data(session);
+
+        // Автоматический переход на рулетку при статусе spinning
+        if (session != null && session.status == 'spinning') {
+          _navigateToRoulette(session.id);
+        }
       },
     );
+  }
+
+  void _navigateToRoulette(String sessionId) {
+    // Используем callback для навигации из UI
+    // UI должен подписаться на изменения сессии
   }
 
   void _unsubscribe() {
@@ -60,7 +68,7 @@ class ActiveSession extends _$ActiveSession {
     final session = await repo.createSession(groupId: groupId);
 
     state = AsyncValue.data(session);
-    _subscribeToSession(session.id);
+    // Realtime подписка уже активна для группы, так что она обработает изменения
 
     return session;
   }
@@ -72,68 +80,35 @@ class ActiveSession extends _$ActiveSession {
 
     final repo = ref.read(sessionRepositoryProvider);
     await repo.startSpinning(currentSession.id);
+    // Realtime автоматически обновит состояние
+  }
+
+  // Принять результат
+  Future<void> acceptResult() async {
+    final currentSession = state.value;
+    if (currentSession == null) return;
+
+    final repo = ref.read(sessionRepositoryProvider);
+    await repo.acceptResult(sessionId: currentSession.id);
+    // Realtime автоматически обновит состояние
+  }
+
+  // Сбросить сессию (для владельца)
+  Future<void> resetSession() async {
+    final currentSession = state.value;
+    if (currentSession == null) return;
+
+    final repo = ref.read(sessionRepositoryProvider);
+    await repo.resetSession(currentSession.id);
+    // Realtime автоматически обновит состояние
   }
 }
 
-// Провайдер вариантов сессии с Realtime
+// Провайдер вариантов сессии с Stream
 @riverpod
-class SessionOptions extends _$SessionOptions {
-  RealtimeChannel? _optionsChannel;
-
-  @override
-  Future<List<Option>> build(String sessionId) async {
-    final repo = ref.watch(sessionRepositoryProvider);
-    final options = await repo.getSessionOptions(sessionId);
-
-    // Подписываемся на изменения вариантов
-    _subscribeToOptions();
-
-    // Отписываемся при dispose
-    ref.onDispose(() {
-      _unsubscribe();
-    });
-
-    return options;
-  }
-
-  void _subscribeToOptions() {
-    final repo = ref.read(sessionRepositoryProvider);
-    _optionsChannel = repo.subscribeToOptions(
-      sessionId: sessionId,
-      onOptionsUpdate: (options) {
-        state = AsyncValue.data(options);
-      },
-    );
-  }
-
-  void _unsubscribe() {
-    if (_optionsChannel != null) {
-      final repo = ref.read(sessionRepositoryProvider);
-      repo.unsubscribe(_optionsChannel!);
-      _optionsChannel = null;
-    }
-  }
-
-  // Добавить вариант
-  Future<void> addOption({
-    required String title,
-    required String userId,
-  }) async {
-    final repo = ref.read(sessionRepositoryProvider);
-    await repo.addOption(
-      sessionId: sessionId,
-      title: title,
-      userId: userId,
-    );
-    // Realtime автоматически обновит список
-  }
-
-  // Удалить вариант
-  Future<void> deleteOption(String optionId) async {
-    final repo = ref.read(sessionRepositoryProvider);
-    await repo.deleteOption(optionId);
-    // Realtime автоматически обновит список
-  }
+Stream<List<Option>> sessionOptions(SessionOptionsRef ref, String sessionId) {
+  final repo = ref.watch(sessionRepositoryProvider);
+  return repo.streamSessionOptions(sessionId);
 }
 
 // Провайдер конкретной сессии по ID
@@ -196,14 +171,12 @@ class VetoLogs extends _$VetoLogs {
   // Использовать вето
   Future<void> useVeto({
     required String groupId,
-    required String userId,
     String? reason,
   }) async {
     final repo = ref.read(sessionRepositoryProvider);
     await repo.useVeto(
       sessionId: sessionId,
       groupId: groupId,
-      userId: userId,
       reason: reason,
     );
     // Realtime автоматически обновит список
