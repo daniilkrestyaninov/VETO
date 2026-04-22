@@ -337,6 +337,169 @@ class _JoinGroupProviderElement extends AutoDisposeFutureProviderElement<void>
   String get userId => (origin as JoinGroupProvider).userId;
 }
 
+String _$leaveGroupHash() => r'd3b916fa588d2baa1743fa55cf99e0acc81e6895';
+
+/// See also [leaveGroup].
+@ProviderFor(leaveGroup)
+const leaveGroupProvider = LeaveGroupFamily();
+
+/// See also [leaveGroup].
+class LeaveGroupFamily extends Family<AsyncValue<void>> {
+  /// See also [leaveGroup].
+  const LeaveGroupFamily();
+
+  /// See also [leaveGroup].
+  LeaveGroupProvider call({
+    required String groupId,
+    required String userId,
+    required bool isOwner,
+  }) {
+    return LeaveGroupProvider(
+      groupId: groupId,
+      userId: userId,
+      isOwner: isOwner,
+    );
+  }
+
+  @override
+  LeaveGroupProvider getProviderOverride(
+    covariant LeaveGroupProvider provider,
+  ) {
+    return call(
+      groupId: provider.groupId,
+      userId: provider.userId,
+      isOwner: provider.isOwner,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'leaveGroupProvider';
+}
+
+/// See also [leaveGroup].
+class LeaveGroupProvider extends AutoDisposeFutureProvider<void> {
+  /// See also [leaveGroup].
+  LeaveGroupProvider({
+    required String groupId,
+    required String userId,
+    required bool isOwner,
+  }) : this._internal(
+          (ref) => leaveGroup(
+            ref as LeaveGroupRef,
+            groupId: groupId,
+            userId: userId,
+            isOwner: isOwner,
+          ),
+          from: leaveGroupProvider,
+          name: r'leaveGroupProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$leaveGroupHash,
+          dependencies: LeaveGroupFamily._dependencies,
+          allTransitiveDependencies:
+              LeaveGroupFamily._allTransitiveDependencies,
+          groupId: groupId,
+          userId: userId,
+          isOwner: isOwner,
+        );
+
+  LeaveGroupProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.groupId,
+    required this.userId,
+    required this.isOwner,
+  }) : super.internal();
+
+  final String groupId;
+  final String userId;
+  final bool isOwner;
+
+  @override
+  Override overrideWith(
+    FutureOr<void> Function(LeaveGroupRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: LeaveGroupProvider._internal(
+        (ref) => create(ref as LeaveGroupRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        groupId: groupId,
+        userId: userId,
+        isOwner: isOwner,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<void> createElement() {
+    return _LeaveGroupProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LeaveGroupProvider &&
+        other.groupId == groupId &&
+        other.userId == userId &&
+        other.isOwner == isOwner;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, groupId.hashCode);
+    hash = _SystemHash.combine(hash, userId.hashCode);
+    hash = _SystemHash.combine(hash, isOwner.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin LeaveGroupRef on AutoDisposeFutureProviderRef<void> {
+  /// The parameter `groupId` of this provider.
+  String get groupId;
+
+  /// The parameter `userId` of this provider.
+  String get userId;
+
+  /// The parameter `isOwner` of this provider.
+  bool get isOwner;
+}
+
+class _LeaveGroupProviderElement extends AutoDisposeFutureProviderElement<void>
+    with LeaveGroupRef {
+  _LeaveGroupProviderElement(super.provider);
+
+  @override
+  String get groupId => (origin as LeaveGroupProvider).groupId;
+  @override
+  String get userId => (origin as LeaveGroupProvider).userId;
+  @override
+  bool get isOwner => (origin as LeaveGroupProvider).isOwner;
+}
+
 String _$groupHash() => r'32b24d5d50a130bdfd76bbd98429e620146ddd3d';
 
 /// See also [group].

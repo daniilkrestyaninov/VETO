@@ -79,6 +79,31 @@ class GroupRepository {
     }
   }
 
+  // Покинуть или удалить группу
+  Future<void> leaveGroup({
+    required String groupId,
+    required String userId,
+    required bool isOwner,
+  }) async {
+    try {
+      if (isOwner) {
+        // Удаляем группу (сессии и участники могут быть удалены каскадно БД)
+        await _supabase.from('sessions').delete().eq('group_id', groupId);
+        await _supabase.from('group_members').delete().eq('group_id', groupId);
+        await _supabase.from('groups').delete().eq('id', groupId);
+      } else {
+        // Выходим из группы
+        await _supabase
+            .from('group_members')
+            .delete()
+            .eq('group_id', groupId)
+            .eq('user_id', userId);
+      }
+    } catch (e) {
+      throw Exception('Ошибка выхода из группы: $e');
+    }
+  }
+
   // Получить группу по ID
   Future<Group> getGroup(String groupId) async {
     try {
@@ -150,31 +175,6 @@ class GroupRepository {
     // т.к. stream() не поддерживает join с users
     yield* Stream.periodic(const Duration(seconds: 2), (_) => groupId)
         .asyncMap((_) => getGroupMembersWithUsers(groupId));
-  }
-
-  // Покинуть группу
-  Future<void> leaveGroup({
-    required String groupId,
-    required String userId,
-  }) async {
-    try {
-      await _supabase
-          .from('group_members')
-          .delete()
-          .eq('group_id', groupId)
-          .eq('user_id', userId);
-    } catch (e) {
-      throw Exception('Ошибка выхода из группы: $e');
-    }
-  }
-
-  // Удалить группу (только для owner)
-  Future<void> deleteGroup(String groupId) async {
-    try {
-      await _supabase.from('groups').delete().eq('id', groupId);
-    } catch (e) {
-      throw Exception('Ошибка удаления группы: $e');
-    }
   }
 
   // Получить информацию об участнике группы

@@ -452,7 +452,7 @@ class _UserVetoTokensProviderElement
   String get userId => (origin as UserVetoTokensProvider).userId;
 }
 
-String _$activeSessionHash() => r'48376abf16fee0834252df728b9bbb92169f5ef8';
+String _$activeSessionHash() => r'4d4825a6ace832e5f9f1d46b7942bede5216c6a9';
 
 abstract class _$ActiveSession
     extends BuildlessAutoDisposeAsyncNotifier<models.Session?> {

@@ -302,6 +302,7 @@ class SessionRepository {
         if (channel != null) {
           _supabase.removeChannel(channel!);
         }
+        controller.close();
       },
     );
 

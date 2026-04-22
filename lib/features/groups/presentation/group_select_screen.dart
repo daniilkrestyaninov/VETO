@@ -105,10 +105,21 @@ class _GroupSelectScreenState extends ConsumerState<GroupSelectScreen> {
 
   Future<void> _openScanner() async {
     final result = await context.push<String>('/qr-scanner');
-    if (result != null && result.isNotEmpty) {
-      _groupIdController.text = result;
-      _handleJoinGroup();
+    if (result == null || result.isEmpty) return;
+
+    // Проверяем, что результат похож на UUID (формат groupId)
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+
+    if (!uuidRegex.hasMatch(result)) {
+      _showError('НЕВАЛИДНЫЙ QR-КОД: НЕ СОДЕРЖИТ ID ГРУППЫ');
+      return;
     }
+
+    _groupIdController.text = result;
+    setState(() => _isCreating = false);
+    _handleJoinGroup();
   }
 
   void _showError(String message) {

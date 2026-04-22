@@ -264,6 +264,77 @@ class _GroupLobbyScreenState extends ConsumerState<GroupLobbyScreen> {
     );
   }
 
+  Future<void> _leaveGroup() async {
+    final user = ref.read(currentUserProvider).value;
+    if (user == null) return;
+
+    final membersAsync = ref.read(groupMembersWithUsersProvider(widget.groupId));
+    final members = membersAsync.value ?? [];
+    
+    // Check if current user is owner
+    bool isOwner = false;
+    for (final member in members) {
+      if (member['user_id'] == user.id && member['role'] == 'owner') {
+        isOwner = true;
+        break;
+      }
+    }
+
+    if (isOwner) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: BrutalTheme.darkGray,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          title: Text(
+            'ВНИМАНИЕ',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: BrutalTheme.warningYellow),
+          ),
+          content: Text(
+            'ВЫ УВЕРЕНЫ? ГРУППА БУДЕТ ПОЛНОСТЬЮ УДАЛЕНА СО ВСЕМИ ДАННЫМИ.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: BrutalTheme.primaryWhite),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                'ОТМЕНА',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(color: BrutalTheme.primaryWhite),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BrutalTheme.accentRed,
+                foregroundColor: BrutalTheme.primaryWhite,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('УДАЛИТЬ'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+    }
+
+    try {
+      await ref.read(leaveGroupProvider(
+        groupId: widget.groupId,
+        userId: user.id,
+        isOwner: isOwner,
+      ).future);
+
+      if (mounted) {
+        context.go('/group-select');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError('ОШИБКА: ${e.toString()}');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final groupAsync = ref.watch(groupProvider(widget.groupId));
@@ -303,6 +374,12 @@ class _GroupLobbyScreenState extends ConsumerState<GroupLobbyScreen> {
             icon: const Icon(Icons.copy),
             onPressed: _copyGroupId,
             tooltip: 'Скопировать код',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _leaveGroup,
+            tooltip: 'Выйти из группы',
+            color: BrutalTheme.accentRed,
           ),
         ],
       ),

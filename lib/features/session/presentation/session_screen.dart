@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -124,6 +125,8 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
           _isAnimating = false;
           _showHammer = true;
         });
+
+        HapticFeedback.heavyImpact();
 
         await Future.delayed(const Duration(milliseconds: 150));
         await _hammerController.forward(from: 0);
@@ -376,40 +379,58 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
                                     
                                 return Transform.translate(
                                   offset: offset,
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(32),
-                                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                                    decoration: BoxDecoration(
-                                      color: _showHammer
-                                          ? BrutalTheme.primaryWhite
-                                          : (isSpinning && _spinAnimation.value > 0.5 ? BrutalTheme.primaryWhite : BrutalTheme.primaryBlack),
-                                      border: Border.all(
-                                        color: _showHammer ? BrutalTheme.primaryBlack : BrutalTheme.primaryWhite,
-                                        width: 6,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: _showHammer ? BrutalTheme.accentRed : BrutalTheme.warningYellow,
-                                          offset: const Offset(12, 12),
-                                        ),
-                                      ],
+                                  child: TweenAnimationBuilder<double>(
+                                    key: ValueKey(_showHammer),
+                                    tween: Tween<double>(
+                                      begin: _showHammer ? 0.5 : 1.0,
+                                      end: 1.0,
                                     ),
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        options[_currentIndex].title.toUpperCase(),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .displayMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w900,
-                                              color: (_showHammer || (isSpinning && _spinAnimation.value > 0.5)) 
-                                                  ? BrutalTheme.primaryBlack 
-                                                  : BrutalTheme.primaryWhite,
-                                              height: 1.1,
-                                            ),
-                                        textAlign: TextAlign.center,
+                                    duration: const Duration(milliseconds: 600),
+                                    curve: Curves.elasticOut,
+                                    builder: (context, scaleValue, childNode) {
+                                      return Transform.scale(
+                                        scale: scaleValue,
+                                        child: Opacity(
+                                          opacity: _showHammer ? scaleValue.clamp(0.0, 1.0) : 1.0,
+                                          child: childNode,
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(32),
+                                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: _showHammer
+                                            ? BrutalTheme.primaryWhite
+                                            : (isSpinning && _spinAnimation.value > 0.5 ? BrutalTheme.primaryWhite : BrutalTheme.primaryBlack),
+                                        border: Border.all(
+                                          color: _showHammer ? BrutalTheme.primaryBlack : BrutalTheme.primaryWhite,
+                                          width: 6,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: _showHammer ? BrutalTheme.accentRed : BrutalTheme.warningYellow,
+                                            offset: const Offset(12, 12),
+                                          ),
+                                        ],
+                                      ),
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          options[_currentIndex].title.toUpperCase(),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .displayMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w900,
+                                                color: (_showHammer || (isSpinning && _spinAnimation.value > 0.5)) 
+                                                    ? BrutalTheme.primaryBlack 
+                                                    : BrutalTheme.primaryWhite,
+                                                height: 1.1,
+                                              ),
+                                          textAlign: TextAlign.center,
+                                        ),
                                       ),
                                     ),
                                   ),

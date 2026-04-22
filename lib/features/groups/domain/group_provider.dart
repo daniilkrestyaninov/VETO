@@ -34,6 +34,18 @@ Future<void> joinGroup(
   await repo.joinGroup(groupId: groupId, userId: userId);
 }
 
+// Простой провайдер для выхода из группы
+@riverpod
+Future<void> leaveGroup(
+  LeaveGroupRef ref, {
+  required String groupId,
+  required String userId,
+  required bool isOwner,
+}) async {
+  final repo = ref.watch(groupRepositoryProvider);
+  await repo.leaveGroup(groupId: groupId, userId: userId, isOwner: isOwner);
+}
+
 // Провайдер списка групп пользователя
 @riverpod
 class UserGroups extends _$UserGroups {
