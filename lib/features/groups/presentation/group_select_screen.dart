@@ -103,6 +103,14 @@ class _GroupSelectScreenState extends ConsumerState<GroupSelectScreen> {
     }
   }
 
+  Future<void> _openScanner() async {
+    final result = await context.push<String>('/qr-scanner');
+    if (result != null && result.isNotEmpty) {
+      _groupIdController.text = result;
+      _handleJoinGroup();
+    }
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -303,11 +311,37 @@ class _GroupSelectScreenState extends ConsumerState<GroupSelectScreen> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 24),
-                    BrutalTextField(
-                      controller: _groupIdController,
-                      label: 'КОД ГРУППЫ',
-                      hint: 'Вставьте код группы',
-                      enabled: !_isLoading,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: BrutalTextField(
+                            controller: _groupIdController,
+                            label: 'КОД ГРУППЫ',
+                            hint: 'Вставьте код группы',
+                            enabled: !_isLoading,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          margin: const EdgeInsets.only(top: 24), // Выравниваем с полем ввода
+                          height: 60,
+                          width: 60,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _openScanner,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: BrutalTheme.warningYellow,
+                              padding: EdgeInsets.zero,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                              side: const BorderSide(color: BrutalTheme.primaryWhite, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.qr_code_scanner,
+                              color: BrutalTheme.primaryBlack,
+                              size: 32,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
                     SizedBox(

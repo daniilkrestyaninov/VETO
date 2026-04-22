@@ -7,6 +7,7 @@ import 'package:veto_app/features/auth/presentation/login_screen.dart';
 import 'package:veto_app/features/auth/presentation/signup_screen.dart';
 import 'package:veto_app/features/groups/presentation/group_select_screen.dart';
 import 'package:veto_app/features/groups/presentation/group_lobby_screen.dart';
+import 'package:veto_app/features/groups/presentation/qr_scanner_screen.dart';
 import 'package:veto_app/features/session/presentation/session_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -79,6 +80,11 @@ class AppRouter {
         path: '/group-select',
         name: 'group-select',
         builder: (context, state) => const GroupSelectScreen(),
+      ),
+      GoRoute(
+        path: '/qr-scanner',
+        name: 'qr-scanner',
+        builder: (context, state) => const QrScannerScreen(),
       ),
       GoRoute(
         path: '/lobby/:groupId',
